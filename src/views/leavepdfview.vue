@@ -241,7 +241,7 @@
                                style="display: flex; flex-direction: row; margin-top: -15px; justify-content: space-between">
                                <div style="display: flex; flex-direction: row;">
                                    <label class="containerlist">
-                                       <input readonly type="checkbox"  disabled  :disabled="![0, 5].some(value => selectedLeavetype.includes(value))"
+                                       <input readonly type="checkbox"  disabled
                                            v-model="vacationleavedetails" :value="vacationdetails[0]">
                                        <svg viewBox="0 0 64 64" height="2em" width="2em">
                                            <path
@@ -264,7 +264,7 @@
                                style="display: flex; flex-direction: row; margin-top: -15px; justify-content: space-between">
                                <div style="display: flex; flex-direction: row;">
                                    <label class="containerlist" >
-                                       <input readonly type="checkbox"  disabled  :disabled="![0, 5].some(value => selectedLeavetype.includes(value))"
+                                       <input readonly type="checkbox"  disabled
                                            v-model="vacationleavedetails" :value="vacationdetails[1]">
                                        <svg viewBox="0 0 64 64" height="2em" width="2em">
                                            <path
@@ -288,7 +288,7 @@
                                style="display: flex; flex-direction: row; margin-top: -15px; justify-content: space-between">
                                <div style="display: flex; flex-direction: row;">
                                    <label class="containerlist">
-                                       <input readonly type="checkbox"  disabled  :disabled="!selectedLeavetype.includes(2)"
+                                       <input readonly type="checkbox"  disabled
                                            v-model="sickleavedetails" :value="sickdetails[0]">
                                        <svg viewBox="0 0 64 64" height="2em" width="2em">
                                            <path
@@ -311,7 +311,7 @@
                                style="display: flex; flex-direction: row; margin-top: -15px; justify-content: space-between">
                                <div style="display: flex; flex-direction: row;">
                                    <label class="containerlist" >
-                                       <input readonly type="checkbox"  disabled  :disabled="!selectedLeavetype.includes(2)"
+                                       <input readonly type="checkbox"  disabled
                                            v-model="sickleavedetails" :value="sickdetails[1]">
                                        <svg viewBox="0 0 64 64" height="2em" width="2em">
                                            <path
@@ -345,7 +345,7 @@
                            </p>
                            <div style="display: flex; flex-direction: row; margin-top: -15px">
                                <label class="containerlist" >
-                                   <input readonly type="checkbox"  disabled  :disabled="!selectedLeavetype.includes(7)"
+                                   <input readonly type="checkbox"  disabled 
                                        v-model="studyleavedetails" :value="studydetails[0]">
                                    <svg viewBox="0 0 64 64" height="2em" width="2em">
                                        <path
@@ -358,7 +358,7 @@
 
                            <div style="display: flex; flex-direction: row; margin-top: -15px">
                                <label class="containerlist">
-                                   <input readonly type="checkbox"  disabled  :disabled="!selectedLeavetype.includes(7)"
+                                   <input readonly type="checkbox"  disabled 
                                        v-model="studyleavedetails" :value="studydetails[1]">
                                    <svg viewBox="0 0 64 64" height="2em" width="2em">
                                        <path
@@ -636,6 +636,9 @@ import { showleavehome } from './leaveform.vue';
 
 
 export default {
+    props: {
+    leaveform_id: String
+  },
    data() {
        return {
         leaveForms:[],
@@ -733,6 +736,12 @@ export default {
        };
    },
    watch: {
+    leaveform_id(newVal) {
+      // Check if the new value is not null, then populate fields
+      if (newVal !== null) {
+        this.fetchLeaveForms(newVal);
+      }
+    },
        text() {
            this.updateRows();
        },
@@ -802,11 +811,14 @@ export default {
    },
 
    mounted() {
-       this.fetchAccounts();
        this.fetchNames();
-       this.fetchLeaveForms();
-       this.fetchemployee();
-       this.comparePosition();
+       this.fetchPosition()
+       this.fetchAccounts();
+        this.fetchLeaveForms();
+        if (this.leaveform_id !== 0) {
+          this.fetchLeaveForms(this.leaveform_id);
+    }
+        
    },
 
    methods: {
@@ -816,7 +828,7 @@ export default {
        async fetchAccounts() {
 
            try {
-               const response = await axios.get('http://192.168.1.250:8000/get_accounts_json');
+               const response = await axios.get('http://172.31.10.159:8000/get_accounts_json');
 
                this.accounts = response.data;
            } catch (error) {
@@ -826,8 +838,9 @@ export default {
 
        async fetchNames() {
            try {
-               const response = await axios.get('http://192.168.1.250:8000/get_names_json');
+               const response = await axios.get('http://172.31.10.159:8000/get_names_json');
                this.names = response.data;
+               console.log(this.names)
            } catch (error) {
                console.error('Error fetching names:', error);
            }
@@ -840,11 +853,24 @@ export default {
            const item = array.find(item => item.position_id === id);
            return item ? item.position_name : '';
        },
-       fetchemployee() {
-           fetch('http://192.168.1.250:8000/get_employees_json/')
+       fetchPosition(){
+        // Fetch positions data
+        fetch('http://172.31.10.159:8000/get_positions_json/')
                .then(response => response.json())
                .then(data => {
-                   this.employees = data.filter(det => det.name_id == this.name_id);
+                   this.positions = data
+               })
+               .catch(error => {
+                   console.error('Error fetching positions:', error);
+               });
+       },
+       fetchemployee(nameId) {
+           fetch('http://172.31.10.159:8000/get_employees_json/')
+               .then(response => response.json())
+               .then(data => {
+                
+                   this.employees = data.filter(det => det.name_id == nameId);
+                   console.log(this.employees)
                    this.division = this.employees[0].division_id
                    if (this.division == 1) {
                        {
@@ -871,41 +897,24 @@ export default {
                            this.reco = ''
                            this.recopost = ''
                        }
-                   } else {
-                       this.reco = ''
-                       this.recopost = ''
-                       this.rd = ''
-                       this.rdpos = ''
-                   }
+                   } 
                    if ([15, 21, 45, 48].includes(this.name_id)) {
                        this.reco = this.signatories[4]
                        this.recopost = this.designations[4]
                        this.rd = ''
                        this.rdpos = ''
-                   } else if (this.name_id == 20) {
-                       this.reco = ''
-                       this.recopost = ''
-                       this.rd = ''
-                       this.rdpos = ''
-                   }
+                   } 
                })
                .catch(error => {
                    console.error('Error fetching employees:', error);
                });
-           // Fetch positions data
-           fetch('http://192.168.1.250:8000/get_positions_json/')
-               .then(response => response.json())
-               .then(data => {
-                   this.positions = data
-               })
-               .catch(error => {
-                   console.error('Error fetching positions:', error);
-               });
+           
        },
-       fetchLeaveForms() {
-      axios.get('http://192.168.1.250:8000/get_leave_json')
+       fetchLeaveForms(libpurm) {
+      axios.get('http://172.31.10.159:8000/get_leave_json')
         .then(response => {
-          this.leaveForms = response.data.filter(libporm => libporm.leaveform_id == 15);
+            console.log(libpurm)
+          this.leaveForms = response.data.filter(libporm => libporm.leaveform_id == parseInt(libpurm));
           
           if (this.leaveForms){
             this.comparePosition()
@@ -945,7 +954,8 @@ export default {
                 this.text2 = this.leaveForms[0].disapproved
             }
 
-            const nameId = this.leaveForms[0].name_id
+            const nameId = this.leaveForms[0].name_id 
+            this.fetchemployee(nameId);
             const foundName = this.names.find(name => name.name_id === nameId);
                    if (foundName) {
                        this.name = foundName;
@@ -953,6 +963,8 @@ export default {
                    } else {
                        // Handle case where name is not found
                    }
+            
+                  
 
             if (this.leaveForms[0].type == 'Vacation Leave'){
                 this.selectedLeavetype.push(0);
@@ -1035,20 +1047,22 @@ export default {
                     return 'Terminal Leave';
                 }
             }
-
+            
           }
+          
         })
         .catch(error => {
           console.error('Error fetching leave forms:', error);
         });
     },
     comparePosition() {
+        console.log('yawa')
       if (this.leaveForms.length > 0 && this.positions.length > 0) {
+        console.log('yawa')
         const leaveForm = this.leaveForms[0];
         console.log(leaveForm.position_id)
         const positionsh = this.positions[leaveForm.position_id-1];
         this.position = positionsh.position_name
-        console.log(this.position)
         
       }
       return null;
@@ -1126,22 +1140,6 @@ export default {
        },
 
 
-       formattedDate() {
-           if (!this.selectedDate) return '';
-           const date = new Date(this.selectedDate);
-           return `${date.toLocaleString('en-US', { month: 'long' })} ${date.getDate()}, ${date.getFullYear()}`;
-       },
-       formattedStartDate() {
-           if (!this.startDate) return '';
-           const startDate = new Date(this.startDate);
-           const endDate = this.endDate ? new Date(this.endDate) : null;
-
-           if (endDate && startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
-               return `${startDate.toLocaleString('en-US', { month: 'long' })} ${startDate.getDate()}-${endDate.getDate()}, ${startDate.getFullYear()}`;
-           } else {
-               return `${startDate.toLocaleString('en-US', { month: 'long' })} ${startDate.getDate()}, ${startDate.getFullYear()}`;
-           }
-       },
        // formattedEndDate() {
        //     if (!this.endDate) return '';
        //     const endDate = new Date(this.endDate);

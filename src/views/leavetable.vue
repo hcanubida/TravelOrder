@@ -45,21 +45,21 @@
         </div>
         <div style="margin-left: 20px; margin-top: 10px;">
           <div style="display: flex; flex-direction: row; margin-top: -5px;">
-            <input readonly
+            <input 
               style="height: 10px; width: 20px; margin-top: 8px; border: none; border-bottom: 1.5px solid black;outline: none; margin-right: 10px; font-size: 10px"
-              v-model="withpay">
+              v-model="withpay" @input="nonumber($event, 'withpay')">
             <p style="font-size: 10px;">days with pay</p>
           </div>
           <div style="display: flex; flex-direction: row; margin-top: -5px;">
-            <input readonly
+            <input 
               style="height: 10px; width: 20px; margin-top: 8px; border: none; border-bottom: 1.5px solid black;outline: none; margin-right: 10px; font-size: 10px"
-              v-model="withoutpay">
+              v-model="withoutpay"  @input="nonumber($event, 'withoutpay')">
             <p>days without pay</p>
           </div>
           <div style="display: flex; flex-direction: row; margin-top: -5px;">
-            <input readonly
+            <input 
               style="height: 10px; width: 20px; margin-top: 8px; border: none; border-bottom: 1.5px solid black;outline: none; margin-right: 10px; font-size: 10px"
-              v-model="othersSpecify">
+              v-model="othersSpecify"  @input="nonumber($event, 'othersSpecify')">
             <p>others (Specify)</p>
           </div>
         </div>
@@ -74,10 +74,11 @@
       </div>
 
       <div class="butokz">
-        <button @click="postCertification"
+        <button @click="postCertification" v-if="this.acc.name_id == 24"
         :disabled="this.leavecredits == '' || this.totalvacation == '' || this.totalsick == '' || this.lessvacation == '' || this.lesssick == '' || this.balancevacation == '' || this.balancesick == '' "
         :style="{ cursor:this.leavecredits == '' || this.totalvacation == '' || this.totalsick == '' || this.lessvacation == '' || this.lesssick == '' || this.balancevacation == '' || this.balancesick == '' ? 'not-allowed' : 'pointer' }"
          >Save</button>
+         <button @click="signature3(certinum)" v-if="this.acc.name_id == 2">Add Signature</button>
         <button @click="certification">Cancel</button>
       </div>
     </div>
@@ -309,30 +310,33 @@
               </td>
 
               <td style="display: flex; justify-content: center;">
-                <button v-if="selectedTravelOrderId != item.travel_order_id"
-                  @click="openPDF(item.travel_order_id)">PDF</button>
-                <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.travel_order_id" @click="close"
+                <button v-if="selectedTravelOrderId != item.leaveform_id"
+                  @click="openPDF(item.leaveform_id)">PDF</button>
+                <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.leaveform_id" @click="close"
                   style="width: 40px; height: 40px; cursor: pointer;" />
               </td>
 
-              <td style="display: flex; justify-content: center;">
-                <button v-if="selectedTravelOrderId != item.travel_order_id"
+              <td style="display: flex; justify-content: center;" v-if="[2, 24].includes(item.name_id)" >
+                <button v-if="certinum != item.leaveform_id "
                   @click="certification(item.leaveform_id)">certification</button>
-                <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.travel_order_id"
+                <img src="/src/assets/exit.png" v-if="certinum == item.leaveform_id"
                   @click="certification" style="width: 40px; height: 40px; cursor: pointer;" />
               </td>
-              <td style="display: flex; justify-content: center;">
-                <button v-if="selectedTravelOrderId != item.travel_order_id"
+
+              <td style="display: flex; justify-content: center;" v-if="[15, 21, 45, 48].includes(item.name_id)">
+                <button v-if="reconum != item.leaveform_id "
                   @click="recommendation(item.leaveform_id)">Recommend</button>
-                <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.travel_order_id"
+                <img src="/src/assets/exit.png" v-if="reconum == item.leaveform_id"
                   @click="recommendation" style="width: 40px; height: 40px; cursor: pointer;" />
               </td>
-              <td style="display: flex; justify-content: center;">
-                <button v-if="selectedTravelOrderId != item.travel_order_id"
+              <td style="display: flex; justify-content: center;" v-if=" [20].includes(item.name_id)">
+                <button v-if="apronum != item.leaveform_id "
                   @click="approve(item.leaveform_id)">Approve</button>
 
+                  <img src="/src/assets/exit.png" v-if="apronum == item.leaveform_id"
+                  @click="approve" style="width: 40px; height: 40px; cursor: pointer;" />
 
-                <!-- <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.travel_order_id" @click="close"
+                <!-- <img src="/src/assets/exit.png" v-if="selectedTravelOrderId == item.leaveform_id" @click="close"
                       style="width: 40px; height: 40px; cursor: pointer;" /> -->
               </td>
 
@@ -372,13 +376,14 @@
       <button @click="printzz">Download as PDF</button>
       <button @click="close">Close PDF</button>
     </div>
-    <pdf :travel_order_id="selectedTravelOrderId"></pdf>
+    <leavepdf :leaveform_id="String(selectedTravelOrderId)"/>
   </div>
 </template>
   
 <script>
 import axios from 'axios';
 import pdf from './pdf.vue'
+import leavepdf from './leavepdfview.vue';
 import otpz from '../components/otp.vue';
 
 import { useAuthStore } from '../store/auth';
@@ -391,7 +396,8 @@ export default {
   },
   components: {
     pdf,
-    otpz
+    otpz,
+    leavepdf,
   },
   mounted() {
     this.fetchAccounts();
@@ -505,7 +511,7 @@ export default {
       formData.append('certification', 'this.certification');
 
 
-      axios.post(`http://192.168.1.250:8000/updateleave_form/${this.certinum}`, formData, {
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${this.certinum}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -536,7 +542,7 @@ export default {
       formData.append('recodesc', this.text);
       formData.append('recommendation', this.recommendation);
 
-      axios.post(`http://192.168.1.250:8000/updateleave_form/${this.reconum}`, formData, {
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${this.reconum}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -546,6 +552,7 @@ export default {
         this.recommendationLeavetype.length = 0
         this.text = ''
         this.recoms = false
+        this.signature1(this.reconum)
         
       }).catch(error => {
         console.error('Error:', error);
@@ -558,7 +565,7 @@ export default {
       formData.append('disapproved', this.text2);
       formData.append('approval', this.approval);
 
-      axios.post(`http://192.168.1.250:8000/updateleave_form/${this.apronum}`, formData, {
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${this.apronum}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -568,6 +575,7 @@ export default {
         this.text2 = ''
         this.approveLeavetype.length = 0
         this.appr = false
+        this.signature2x(this.apronum)
       }).catch(error => {
         console.error('Error:', error);
       });
@@ -581,9 +589,9 @@ export default {
       this.otp = false;
 
       const formData = new FormData();
-      formData.append('signature1', this.acc.signature);
+      formData.append('recommendation', this.acc.signature);
 
-      axios.post(`http://192.168.1.250:8000/update_form/${form_id}`, formData, {
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${form_id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -605,12 +613,34 @@ export default {
       this.otp = false;
 
       const formData = new FormData();
-      formData.append('signature2', this.acc.signature);
-      formData.append('sname', this.sub.name_id);
-      formData.append('sdiv', this.sub.division_id);
+      formData.append('approval', this.acc.signature);
 
 
-      axios.post(`http://192.168.1.250:8000/update_form/${form_id}`, formData, {
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${form_id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }).then(() => {
+        this.fetchData();
+        this.selectedTravelOrderId = 0;
+        useAuthStore().updateVerifiedOTPs('false');
+        localStorage.setItem('verifiedOTPs', 'false');
+        this.otp = false;
+        window.location.reload()
+      }).catch(error => {
+        console.error('Error:', error);
+      });
+    },
+    async signature3(form_id) {
+      this.otp = true;
+      await this.waitForVerifiedOTPs();
+      this.otp = false;
+
+      const formData = new FormData();
+      formData.append('certification    ', this.acc.signature);
+
+
+      axios.post(`http://172.31.10.159:8000/updateleave_form/${form_id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -641,12 +671,12 @@ export default {
     //   }
     // },
     fetchAccounts() {
-      axios.get('http://192.168.1.250:8000/get_accounts_json')
+      axios.get('http://172.31.10.159:8000/get_accounts_json')
         .then(response => {
           this.acc = response.data.find(result => result.account_id == this.accountId);
           this.fetchData()
           if (this.acc) {
-            this.imageUrl = `http://192.168.1.250:8000/storage/${this.acc.signature}`;
+            this.imageUrl = `http://172.31.10.159:8000/storage/${this.acc.signature}`;
           }
           useAuthStore().updateVerifiedOTPs('false');
           localStorage.setItem('verifiedOTPs', 'false');
@@ -658,7 +688,7 @@ export default {
 
     fetchData() {
       this.load = true
-      axios.get('http://192.168.1.250:8000/get_leave_json')
+      axios.get('http://172.31.10.159:8000/get_leave_json')
         .then(response => {
           this.mawala = true;
           this.load = false
@@ -711,7 +741,7 @@ export default {
         });
     },
     fetchNames() {
-      axios.get('http://192.168.1.250:8000/get_names_json')
+      axios.get('http://172.31.10.159:8000/get_names_json')
         .then(response => {
           this.names = response.data;
         })
@@ -720,7 +750,7 @@ export default {
         });
     },
     fetchEmployees() {
-      axios.get('http://192.168.1.250:8000/get_employees_json')
+      axios.get('http://172.31.10.159:8000/get_employees_json')
         .then(response => {
           this.employees = response.data;
         })
